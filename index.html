@@ -13,18 +13,20 @@
         <h1>Infinite Crossword</h1>
         
         <div id="loading-screen">
-            <p>Loading 780,000 words from database...</p>
+            <p>Loading database...</p>
             <div class="spinner"></div>
         </div>
 
         <div id="game-area" style="display:none;">
             <div class="level-control">
-                <button onclick="prevLevel()" class="nav-btn">&lt;</button>
+                <button onclick="prevLevel()" class="nav-btn" id="btn-prev">&lt;</button>
+                
                 <div class="level-display">
                     <label>LEVEL</label>
-                    <input type="number" id="level-input" value="1" min="1" onchange="loadLevelFromInput()">
+                    <input type="number" id="level-input" value="1" readonly>
                 </div>
-                <button onclick="nextLevel()" class="nav-btn">&gt;</button>
+                
+                <button onclick="nextLevel()" class="nav-btn" id="btn-next" disabled>&gt;</button>
             </div>
 
             <div class="main-layout">
