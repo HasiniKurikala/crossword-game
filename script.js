@@ -9,7 +9,7 @@ let revealCooldown = false;
 
 window.onload = function() {
     // IMPORTANT: Make sure this filename matches exactly what you uploaded to GitHub
-    Papa.parse("nytcrosswords_25mb.csv", {
+    Papa.parse("nytcrosswords.csv", {
         download: true,
         header: true,
         complete: function(results) {
