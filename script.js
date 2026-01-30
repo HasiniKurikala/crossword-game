@@ -1,70 +1,56 @@
 let allWords = [];
 let currentLevel = 1;
-const GRID_SIZE = 13; // 13x13 Grid
+let maxLevelReached = 1; // Track the highest level unlocked
+const GRID_SIZE = 13;
 let grid = [];
 let placedWords = [];
 
-// 1. LOAD AND PARSE CSV
 window.onload = function() {
     console.log("Fetching CSV...");
+    // MAKE SURE THIS MATCHES YOUR FILENAME ON GITHUB
     Papa.parse("nytcrosswords.csv", {
         download: true,
         header: true,
         complete: function(results) {
-            console.log("CSV Loaded. Processing...");
+            console.log("CSV Loaded.");
             processData(results.data);
         },
         error: function(err) {
-            alert("Error loading CSV file. Make sure 'nytcrosswords.csv' is uploaded to your repo.");
-            console.error(err);
+            alert("Error loading CSV. Check filename!");
         }
     });
 };
 
-// 2. PROCESS & SHUFFLE DATA
 function processData(data) {
-    // Filter for valid words (3-6 letters, A-Z only)
-    // We filter strictly to make the grid generation easier
-    let validData = data.filter(row => {
-        if (!row.Word || !row.Clue) return false;
-        let w = row.Word.toString().toUpperCase().replace(/[^A-Z]/g, '');
-        return w.length >= 3 && w.length <= 6;
-    });
-
-    // Remove duplicates (keep one clue per word)
     let seen = new Set();
     let uniqueData = [];
-    validData.forEach(item => {
-        let cleanWord = item.Word.toUpperCase().replace(/[^A-Z]/g, '');
-        if (!seen.has(cleanWord)) {
-            seen.add(cleanWord);
-            uniqueData.push({
-                word: cleanWord,
-                clue: item.Clue
-            });
+    
+    // Filter and clean data
+    data.forEach(row => {
+        if (!row.Word || !row.Clue) return;
+        let cleanWord = row.Word.toString().toUpperCase().replace(/[^A-Z]/g, '');
+        if (cleanWord.length >= 3 && cleanWord.length <= 6) {
+            if (!seen.has(cleanWord)) {
+                seen.add(cleanWord);
+                uniqueData.push({ word: cleanWord, clue: row.Clue });
+            }
         }
     });
 
-    console.log(`Found ${uniqueData.length} unique valid words.`);
-
-    // Shuffle Deterministically (Seed = 12345)
-    // This ensures everyone gets the same "Random" order
+    // Shuffle once deterministically
     allWords = shuffle(uniqueData, 12345);
-
-    // Hide Loading, Show Game
+    
     document.getElementById('loading-screen').style.display = 'none';
     document.getElementById('game-area').style.display = 'block';
-
-    // Start Level 1
+    
     loadLevel(1);
 }
 
-// Seeded Shuffle Function
 function shuffle(array, seed) {
     let m = array.length, t, i;
     while (m) {
         i = Math.floor(random(seed) * m--);
-        seed++; // Increment seed to change random value
+        seed++;
         t = array[m];
         array[m] = array[i];
         array[i] = t;
@@ -72,76 +58,76 @@ function shuffle(array, seed) {
     return array;
 }
 
-// Simple seeded random number generator
 function random(seed) {
     var x = Math.sin(seed++) * 10000;
     return x - Math.floor(x);
 }
 
-// 3. GENERATE LEVEL
 function loadLevel(level) {
     currentLevel = level;
     document.getElementById('level-input').value = level;
     
-    // Slice words for this level
-    // Level 1: 0-25, Level 2: 25-50, etc.
-    const wordsPerLevel = 25; 
+    // Manage Buttons
+    document.getElementById('btn-prev').disabled = (level === 1);
+    
+    // Only enable Next if we have already beaten this level before
+    // OR if we solve it now.
+    updateNextButtonState();
+
+    // Get words for this level (20 words per level)
+    const wordsPerLevel = 20; 
     const startIndex = (level - 1) * wordsPerLevel;
     const levelWords = allWords.slice(startIndex, startIndex + wordsPerLevel);
     
     if (levelWords.length < 5) {
-        alert("You have reached the end of the dataset! Amazing!");
+        alert("End of Game Data!");
         return;
     }
 
-    // Generate the Puzzle
     const puzzleData = generateGrid(levelWords);
     placedWords = puzzleData.words;
-    
     renderBoard();
 }
 
-// 4. GRID GENERATOR ALGORITHM
+function updateNextButtonState() {
+    // Enable next button ONLY if we are re-playing an old level
+    // Otherwise, it stays disabled until we solve it.
+    const btnNext = document.getElementById('btn-next');
+    if (currentLevel < maxLevelReached) {
+        btnNext.disabled = false;
+    } else {
+        btnNext.disabled = true;
+    }
+}
+
 function generateGrid(wordList) {
     let tempGrid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
     let placed = [];
-    
-    // Sort by length (Longest first helps placement)
     wordList.sort((a, b) => b.word.length - a.word.length);
     
-    // Place First Word
     let first = wordList[0];
     let startX = Math.floor((GRID_SIZE - first.word.length) / 2);
     let startY = Math.floor(GRID_SIZE / 2);
     placeWord(tempGrid, first, startX, startY, 'across');
     placed.push({ ...first, startX, startY, direction: 'across' });
     
-    // Try to place others
     for (let i = 1; i < wordList.length; i++) {
-        if (placed.length >= 12) break; // Limit to 12 words per puzzle
-        
+        if (placed.length >= 10) break; // Keep puzzles slightly smaller to ensure they fit
         let current = wordList[i];
         let placedObj = tryPlaceWord(tempGrid, current, placed);
-        if (placedObj) {
-            placed.push(placedObj);
-        }
+        if (placedObj) placed.push(placedObj);
     }
-    
     return { words: placed };
 }
 
 function tryPlaceWord(grid, wordObj, placedList) {
-    // Try to intersect with every placed word
     for (let p of placedList) {
-        // Find common letters
         for (let i = 0; i < p.word.length; i++) {
             for (let j = 0; j < wordObj.word.length; j++) {
                 if (p.word[i] === wordObj.word[j]) {
-                    // Intersection found
                     let newDir = p.direction === 'across' ? 'down' : 'across';
                     let newX = p.direction === 'across' ? p.startX + i : p.startX - j;
                     let newY = p.direction === 'across' ? p.startY - j : p.startY + i;
-                    
                     if (canPlace(grid, wordObj.word, newX, newY, newDir)) {
                         placeWord(grid, wordObj, newX, newY, newDir);
                         return { ...wordObj, startX: newX, startY: newY, direction: newDir };
@@ -190,22 +176,17 @@ function placeWord(grid, wordObj, x, y, dir) {
     }
 }
 
-// 5. RENDER BOARD
-const board = document.getElementById('crossword-board');
-const acrossList = document.getElementById('across-clues');
-const downList = document.getElementById('down-clues');
-
 function renderBoard() {
+    const board = document.getElementById('crossword-board');
+    const acrossList = document.getElementById('across-clues');
+    const downList = document.getElementById('down-clues');
+    
     board.innerHTML = '';
     acrossList.innerHTML = '';
     downList.innerHTML = '';
     board.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 38px)`;
     board.style.gridTemplateRows = `repeat(${GRID_SIZE}, 38px)`;
     
-    // Create Grid Array for Lookup
-    let displayGrid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
-    
-    // Create DOM Cells
     let domCells = [];
     for(let y=0; y<GRID_SIZE; y++) {
         let row = [];
@@ -217,11 +198,9 @@ function renderBoard() {
         }
         domCells.push(row);
     }
-    grid = domCells; // Global reference
+    grid = domCells;
 
-    // Fill Words
     let clueNum = 1;
-    // Sort to keep numbering clean (top-left to bottom-right)
     placedWords.sort((a,b) => (a.startY - b.startY) || (a.startX - b.startX));
     
     placedWords.forEach(w => {
@@ -267,7 +246,15 @@ function checkAnswers() {
         }
         if (isCorrect) correct++;
     });
-    if (correct === placedWords.length) alert("Level Complete!");
+    
+    if (correct === placedWords.length) {
+        // UNLOCK NEXT LEVEL
+        if (currentLevel === maxLevelReached) {
+            maxLevelReached++;
+        }
+        document.getElementById('btn-next').disabled = false;
+        alert("🎉 Level Complete! 'Next Level' button is now unlocked.");
+    }
 }
 
 function revealAnswers() {
@@ -281,6 +268,14 @@ function revealAnswers() {
     });
 }
 
-function nextLevel() { loadLevel(currentLevel + 1); }
-function prevLevel() { if(currentLevel > 1) loadLevel(currentLevel - 1); }
-function loadLevelFromInput() { loadLevel(parseInt(document.getElementById('level-input').value)); }
+function nextLevel() { 
+    if (currentLevel < maxLevelReached) {
+        loadLevel(currentLevel + 1); 
+    }
+}
+
+function prevLevel() { 
+    if (currentLevel > 1) {
+        loadLevel(currentLevel - 1); 
+    }
+}
