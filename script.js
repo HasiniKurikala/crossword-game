@@ -1,144 +1,81 @@
-const levels = {
-  "1": {
-    "gridSize": 10,
-    "words": [
-      { "word": "GMS", "clue": "Baseball V.I.P.'s", "startX": 4, "startY": 5, "direction": "across" },
-      { "word": "SEEMS", "clue": "Is apparent", "startX": 6, "startY": 5, "direction": "down" },
-      { "word": "EDU", "clue": "University URL ending", "startX": 6, "startY": 6, "direction": "across" },
-      { "word": "HALLE", "clue": "Berry that's much sought after?", "startX": 2, "startY": 7, "direction": "across" },
-      { "word": "CHAI", "clue": "Spiced milk tea", "startX": 2, "startY": 6, "direction": "down" },
-      { "word": "VIAL", "clue": "Vaccine holder", "startX": 1, "startY": 9, "direction": "across" },
-      { "word": "SAE", "clue": "Encl. to an editor", "startX": 6, "startY": 9, "direction": "across" },
-      { "word": "ECUS", "clue": "Old French coins", "startX": 8, "startY": 4, "direction": "down" }
-    ]
-  },
-  "2": {
-    "gridSize": 12,
-    "words": [
-      { "word": "NLE", "clue": "Phillies' div.", "startX": 5, "startY": 6, "direction": "across" },
-      { "word": "INERT", "clue": "Like some gases", "startX": 7, "startY": 4, "direction": "down" },
-      { "word": "RIB", "clue": "Josh", "startX": 6, "startY": 4, "direction": "across" },
-      { "word": "SNOOTY", "clue": "Hoity-toity", "startX": 5, "startY": 5, "direction": "down" },
-      { "word": "TOXIN", "clue": "Benzene or lead", "startX": 7, "startY": 8, "direction": "across" },
-      { "word": "WHATS", "clue": "Preceder of his name?", "startX": 1, "startY": 5, "direction": "across" },
-      { "word": "SNATCH", "clue": "Grab", "startX": 3, "startY": 3, "direction": "down" },
-      { "word": "TRI", "clue": "Prefix with athlete", "startX": 10, "startY": 6, "direction": "down" },
-      { "word": "OVER", "clue": "In the strike zone", "startX": 6, "startY": 1, "direction": "down" },
-      { "word": "NOONTIDE", "clue": "When shadows disappear", "startX": 4, "startY": 1, "direction": "across" },
-      { "word": "RIGA", "clue": "Latvia's capital", "startX": 9, "startY": 0, "direction": "down" },
-      { "word": "ADA", "clue": "Org. fighting decay", "startX": 9, "startY": 3, "direction": "across" }
-    ]
-  },
-  "3": {
-    "gridSize": 15,
-    "words": [
-      { "word": "ETON", "clue": "Prep school for some English princes", "startX": 5, "startY": 7, "direction": "across" },
-      { "word": "CEDE", "clue": "Grant", "startX": 5, "startY": 6, "direction": "down" },
-      { "word": "ELYSIAN", "clue": "Heavenly", "startX": 8, "startY": 1, "direction": "down" },
-      { "word": "DARKEN", "clue": "Shade in", "startX": 1, "startY": 9, "direction": "across" },
-      { "word": "RDS", "clue": "Places for forks: Abbr.", "startX": 6, "startY": 4, "direction": "across" },
-      { "word": "HANOI", "clue": "World capital NE of Vientiane", "startX": 2, "startY": 8, "direction": "down" },
-      { "word": "NEGATOR", "clue": "Undoer", "startX": 7, "startY": 1, "direction": "across" },
-      { "word": "PAPERBAG", "clue": "Makeshift mask", "startX": 10, "startY": 0, "direction": "down" },
-      { "word": "NAST", "clue": "Conde ___", "startX": 6, "startY": 9, "direction": "down" },
-      { "word": "AMITY", "clue": "Goodwill", "startX": 0, "startY": 12, "direction": "across" },
-      { "word": "ALERT", "clue": "Argus-eyed", "startX": 10, "startY": 6, "direction": "across" },
-      { "word": "CEDES", "clue": "Gives up", "startX": 12, "startY": 5, "direction": "down" },
-      { "word": "EASE", "clue": "Naturalness", "startX": 10, "startY": 3, "direction": "across" },
-      { "word": "KARO", "clue": "Corn syrup brand", "startX": 6, "startY": 2, "direction": "down" },
-      { "word": "OLA", "clue": "Rock-___ (jukebox brand)", "startX": 0, "startY": 10, "direction": "down" }
-    ]
-  }
-};
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #e9ecef;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+.game-container {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    max-width: 950px;
+    width: 100%;
+}
+h1 { text-align: center; color: #2c3e50; margin-top: 0; }
 
-let currentLevel = 1;
-let grid = [];
-const board = document.getElementById('crossword-board');
-const acrossList = document.getElementById('across-clues');
-const downList = document.getElementById('down-clues');
+/* Level Controls */
+.level-control {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 25px;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+}
+.level-display { text-align: center; }
+.level-display label { display: block; font-size: 12px; font-weight: bold; color: #7f8c8d; }
+input[type="number"] {
+    width: 60px; font-size: 24px; text-align: center;
+    border: 2px solid #bdc3c7; border-radius: 5px; padding: 5px;
+}
+.nav-btn {
+    background: #34495e; color: white; border: none;
+    width: 40px; height: 40px; border-radius: 50%;
+    font-size: 20px; cursor: pointer; transition: 0.2s;
+}
+.nav-btn:hover { background: #2c3e50; transform: scale(1.1); }
 
-function loadLevel(levelId) {
-    currentLevel = levelId;
-    const data = levels[levelId];
-    board.innerHTML = '';
-    acrossList.innerHTML = '';
-    downList.innerHTML = '';
-    grid = [];
-    board.style.gridTemplateColumns = `repeat(${data.gridSize}, 35px)`;
-    board.style.gridTemplateRows = `repeat(${data.gridSize}, 35px)`;
-    
-    for (let y = 0; y < data.gridSize; y++) {
-        let row = [];
-        for (let x = 0; x < data.gridSize; x++) {
-            let cell = document.createElement('div');
-            cell.classList.add('cell', 'block');
-            cell.dataset.x = x;
-            cell.dataset.y = y;
-            board.appendChild(cell);
-            row.push(cell);
-        }
-        grid.push(row);
-    }
-
-    let wordCount = 1;
-    data.words.forEach((w) => {
-        let startCell = grid[w.startY][w.startX];
-        if (!startCell.querySelector('.number')) {
-            let num = document.createElement('span');
-            num.className = 'number';
-            num.innerText = wordCount++;
-            startCell.appendChild(num);
-        }
-        for (let i = 0; i < w.word.length; i++) {
-            let x = w.direction === 'across' ? w.startX + i : w.startX;
-            let y = w.direction === 'across' ? w.startY : w.startY + i;
-            let cell = grid[y][x];
-            cell.classList.remove('block');
-            if (!cell.querySelector('input')) {
-                let input = document.createElement('input');
-                input.maxLength = 1;
-                cell.appendChild(input);
-            }
-        }
-        let li = document.createElement('li');
-        li.innerText = `${startCell.querySelector('.number').innerText}. ${w.clue}`;
-        if (w.direction === 'across') acrossList.appendChild(li);
-        else downList.appendChild(li);
-    });
+/* Layout */
+.main-layout { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; }
+#crossword-board {
+    display: grid;
+    background: #2c3e50;
+    border: 5px solid #2c3e50;
+    gap: 1px;
+    width: fit-content;
+}
+.cell {
+    width: 38px; height: 38px;
+    background: white; position: relative;
+    display: flex; justify-content: center; align-items: center;
+}
+.cell.block { background: #2c3e50; }
+.cell input {
+    width: 100%; height: 100%; border: none;
+    text-align: center; font-size: 20px; font-weight: bold;
+    text-transform: uppercase; color: #2c3e50; background: transparent;
+}
+.cell input:focus { background: #e8f6f3; outline: none; }
+.cell .number {
+    position: absolute; top: 2px; left: 3px;
+    font-size: 10px; font-weight: bold; color: #7f8c8d; pointer-events: none;
 }
 
-function changeLevel() {
-    loadLevel(parseInt(document.getElementById('level-select').value));
-}
+/* Clues */
+.clue-section { flex: 1; min-width: 300px; display: flex; gap: 20px; }
+.clue-column { flex: 1; }
+h3 { border-bottom: 2px solid #3498db; padding-bottom: 8px; color: #2980b9; }
+ul { list-style: none; padding: 0; height: 400px; overflow-y: auto; }
+li { padding: 5px; font-size: 14px; line-height: 1.4; border-bottom: 1px solid #eee; }
 
-function checkAnswers() {
-    let correctCount = 0;
-    const data = levels[currentLevel];
-    data.words.forEach(w => {
-        let isCorrect = true;
-        for (let i = 0; i < w.word.length; i++) {
-            let x = w.direction === 'across' ? w.startX + i : w.startX;
-            let y = w.direction === 'across' ? w.startY : w.startY + i;
-            let input = grid[y][x].querySelector('input');
-            if (input.value.toUpperCase() !== w.word[i]) {
-                isCorrect = false; input.style.color = 'red';
-            } else { input.style.color = 'black'; }
-        }
-        if (isCorrect) correctCount++;
-    });
-    if (correctCount === data.words.length) alert("Level Complete!");
-}
-
-function revealAnswers() {
-    const data = levels[currentLevel];
-    data.words.forEach(w => {
-        for (let i = 0; i < w.word.length; i++) {
-            let x = w.direction === 'across' ? w.startX + i : w.startX;
-            let y = w.direction === 'across' ? w.startY : w.startY + i;
-            let input = grid[y][x].querySelector('input');
-            input.value = w.word[i]; input.style.color = 'blue';
-        }
-    });
-}
-
-loadLevel(1);
+/* Bottom Buttons */
+.controls { margin-top: 30px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+button { padding: 12px 25px; font-size: 16px; border-radius: 6px; cursor: pointer; border: none; margin: 0 5px; transition: 0.2s; }
+.action-btn { background: #27ae60; color: white; }
+.action-btn:hover { background: #219150; }
+.secondary-btn { background: #95a5a6; color: white; }
+.new-btn { background: #e67e22; color: white; }
