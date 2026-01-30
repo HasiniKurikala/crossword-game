@@ -8,7 +8,7 @@ let selectedCell = { x: -1, y: -1 };
 let revealCooldown = false;
 
 window.onload = function() {
-    // IMPORTANT: Make sure this filename matches exactly what you uploaded to GitHub
+    // UPDATED: Now looks for 'nytcrosswords.csv'
     Papa.parse("nytcrosswords.csv", {
         download: true,
         header: true,
@@ -16,7 +16,7 @@ window.onload = function() {
             processData(results.data);
         },
         error: function(err) {
-            alert("Error loading CSV file. Check filename!");
+            alert("Error loading CSV file. Make sure 'nytcrosswords.csv' is in your repository!");
         }
     });
 };
@@ -27,6 +27,7 @@ function processData(data) {
     data.forEach(row => {
         if (!row.Word || !row.Clue) return;
         let cleanWord = row.Word.toString().toUpperCase().replace(/[^A-Z]/g, '');
+        // Filtering for words between 3 and 6 letters
         if (cleanWord.length >= 3 && cleanWord.length <= 6) {
             if (!seen.has(cleanWord)) {
                 seen.add(cleanWord);
@@ -49,7 +50,7 @@ function loadLevel(level) {
     document.getElementById('current-level').innerText = level;
     document.getElementById('victory-modal').style.display = 'none';
     
-    // Select words for this level
+    // Select words for this level (20 words per level)
     const startIndex = (level - 1) * 20;
     const levelWords = allWords.slice(startIndex, startIndex + 20);
     
