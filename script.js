@@ -1,31 +1,23 @@
 let allWords = [];
 let currentLevel = 1;
-let maxLevelReached = 1; // Track the highest level unlocked
 const GRID_SIZE = 13;
-let grid = [];
+let grid = []; // Stores the correct letter for each cell
 let placedWords = [];
+let selectedInput = null; // Track which cell the user clicked
+let revealCooldown = false;
 
 window.onload = function() {
-    console.log("Fetching CSV...");
-    // MAKE SURE THIS MATCHES YOUR FILENAME ON GITHUB
+    // CHANGE THIS TO MATCH YOUR FILENAME
     Papa.parse("nytcrosswords.csv", {
-        download: true,
-        header: true,
-        complete: function(results) {
-            console.log("CSV Loaded.");
-            processData(results.data);
-        },
-        error: function(err) {
-            alert("Error loading CSV. Check filename!");
-        }
+        download: true, header: true,
+        complete: function(results) { processData(results.data); },
+        error: function(err) { alert("Error loading CSV."); }
     });
 };
 
 function processData(data) {
     let seen = new Set();
     let uniqueData = [];
-    
-    // Filter and clean data
     data.forEach(row => {
         if (!row.Word || !row.Clue) return;
         let cleanWord = row.Word.toString().toUpperCase().replace(/[^A-Z]/g, '');
@@ -36,90 +28,214 @@ function processData(data) {
             }
         }
     });
-
-    // Shuffle once deterministically
+    // Shuffle with fixed seed
     allWords = shuffle(uniqueData, 12345);
-    
     document.getElementById('loading-screen').style.display = 'none';
     document.getElementById('game-area').style.display = 'block';
-    
     loadLevel(1);
-}
-
-function shuffle(array, seed) {
-    let m = array.length, t, i;
-    while (m) {
-        i = Math.floor(random(seed) * m--);
-        seed++;
-        t = array[m];
-        array[m] = array[i];
-        array[i] = t;
-    }
-    return array;
-}
-
-function random(seed) {
-    var x = Math.sin(seed++) * 10000;
-    return x - Math.floor(x);
 }
 
 function loadLevel(level) {
     currentLevel = level;
-    document.getElementById('level-input').value = level;
+    document.getElementById('current-level').innerText = level;
+    document.getElementById('victory-modal').style.display = 'none';
     
-    // Manage Buttons
-    document.getElementById('btn-prev').disabled = (level === 1);
+    // Get words (20 per level)
+    const startIndex = (level - 1) * 20;
+    const levelWords = allWords.slice(startIndex, startIndex + 20);
     
-    // Only enable Next if we have already beaten this level before
-    // OR if we solve it now.
-    updateNextButtonState();
-
-    // Get words for this level (20 words per level)
-    const wordsPerLevel = 20; 
-    const startIndex = (level - 1) * wordsPerLevel;
-    const levelWords = allWords.slice(startIndex, startIndex + wordsPerLevel);
-    
-    if (levelWords.length < 5) {
-        alert("End of Game Data!");
-        return;
-    }
+    if (levelWords.length < 5) { alert("End of Game!"); return; }
 
     const puzzleData = generateGrid(levelWords);
     placedWords = puzzleData.words;
     renderBoard();
 }
 
-function updateNextButtonState() {
-    // Enable next button ONLY if we are re-playing an old level
-    // Otherwise, it stays disabled until we solve it.
-    const btnNext = document.getElementById('btn-next');
-    if (currentLevel < maxLevelReached) {
-        btnNext.disabled = false;
+function renderBoard() {
+    const board = document.getElementById('crossword-board');
+    const acrossList = document.getElementById('across-clues');
+    const downList = document.getElementById('down-clues');
+    
+    board.innerHTML = ''; acrossList.innerHTML = ''; downList.innerHTML = '';
+    board.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 38px)`;
+    board.style.gridTemplateRows = `repeat(${GRID_SIZE}, 38px)`;
+    
+    // Init Grid Data
+    grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
+    
+    // Create DOM Cells
+    let domCells = [];
+    for(let y=0; y<GRID_SIZE; y++) {
+        let row = [];
+        for(let x=0; x<GRID_SIZE; x++) {
+            let cell = document.createElement('div');
+            cell.className = 'cell block';
+            board.appendChild(cell);
+            row.push(cell);
+        }
+        domCells.push(row);
+    }
+
+    let clueNum = 1;
+    placedWords.sort((a,b) => (a.startY - b.startY) || (a.startX - b.startX));
+    
+    placedWords.forEach(w => {
+        let startCell = domCells[w.startY][w.startX];
+        if (!startCell.querySelector('.number')) {
+            let num = document.createElement('span');
+            num.className = 'number'; num.innerText = clueNum++;
+            startCell.appendChild(num);
+        }
+        let numText = startCell.querySelector('.number').innerText;
+        
+        for (let i = 0; i < w.word.length; i++) {
+            let x = w.direction === 'across' ? w.startX + i : w.startX;
+            let y = w.direction === 'across' ? w.startY : w.startY + i;
+            let cell = domCells[y][x];
+            
+            // Store correct letter in our logical grid
+            grid[y][x] = w.word[i];
+            
+            cell.classList.remove('block');
+            if (!cell.querySelector('input')) {
+                let input = document.createElement('input');
+                input.maxLength = 1;
+                input.dataset.x = x;
+                input.dataset.y = y;
+                // EVENT: On Input (Typing)
+                input.addEventListener('input', (e) => handleInput(e.target));
+                // EVENT: On Focus (Clicking)
+                input.addEventListener('focus', (e) => {
+                    selectedInput = e.target;
+                    // Highlight logic could go here
+                });
+                cell.appendChild(input);
+            }
+        }
+        
+        let li = document.createElement('li');
+        li.innerHTML = `<b>${numText}.</b> ${w.clue}`;
+        if (w.direction === 'across') acrossList.appendChild(li);
+        else downList.appendChild(li);
+    });
+}
+
+// --- CORE GAMEPLAY LOGIC ---
+
+function handleInput(input) {
+    const x = parseInt(input.dataset.x);
+    const y = parseInt(input.dataset.y);
+    const correctLetter = grid[y][x];
+    const userLetter = input.value.toUpperCase();
+
+    // Reset styles
+    input.parentElement.classList.remove('shake');
+    input.style.color = 'black';
+
+    if (userLetter === '') return;
+
+    if (userLetter === correctLetter) {
+        // CORRECT: Green & Lock
+        input.style.color = '#27ae60';
+        input.style.fontWeight = 'bold';
+        checkWinCondition();
     } else {
-        btnNext.disabled = true;
+        // WRONG: Shake & Clear
+        input.style.color = 'red';
+        input.parentElement.classList.add('shake');
+        // Clear wrong letter after 500ms so they can try again
+        setTimeout(() => {
+            input.value = '';
+            input.parentElement.classList.remove('shake');
+        }, 500);
     }
 }
 
+function revealSelectedSquare() {
+    if (revealCooldown) return; // Button is cooling down
+    if (!selectedInput) {
+        alert("Please click a white square first!");
+        return;
+    }
+
+    const x = parseInt(selectedInput.dataset.x);
+    const y = parseInt(selectedInput.dataset.y);
+    const correctLetter = grid[y][x];
+
+    // Fill correct letter
+    selectedInput.value = correctLetter;
+    selectedInput.style.color = '#8e44ad'; // Purple for revealed
+    
+    // Trigger Win Check
+    checkWinCondition();
+
+    // Start Cooldown
+    startCooldown(15);
+}
+
+function startCooldown(seconds) {
+    revealCooldown = true;
+    const btn = document.getElementById('btn-reveal');
+    btn.disabled = true;
+    
+    let remaining = seconds;
+    btn.innerHTML = `Wait ${remaining}s`;
+
+    const interval = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+            clearInterval(interval);
+            revealCooldown = false;
+            btn.disabled = false;
+            btn.innerHTML = `Reveal Letter`;
+        } else {
+            btn.innerHTML = `Wait ${remaining}s`;
+        }
+    }, 1000);
+}
+
+function checkWinCondition() {
+    // Check if all inputs match grid
+    const inputs = document.querySelectorAll('.cell input');
+    let allCorrect = true;
+    
+    inputs.forEach(input => {
+        const x = parseInt(input.dataset.x);
+        const y = parseInt(input.dataset.y);
+        if (input.value.toUpperCase() !== grid[y][x]) {
+            allCorrect = false;
+        }
+    });
+
+    if (allCorrect) {
+        setTimeout(() => {
+            document.getElementById('victory-modal').style.display = 'block';
+        }, 300);
+    }
+}
+
+function nextLevel() {
+    loadLevel(currentLevel + 1);
+}
+
+// --- UTILITIES (Grid Gen + Shuffle) ---
 function generateGrid(wordList) {
     let tempGrid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
     let placed = [];
     wordList.sort((a, b) => b.word.length - a.word.length);
-    
     let first = wordList[0];
     let startX = Math.floor((GRID_SIZE - first.word.length) / 2);
     let startY = Math.floor(GRID_SIZE / 2);
     placeWord(tempGrid, first, startX, startY, 'across');
     placed.push({ ...first, startX, startY, direction: 'across' });
-    
     for (let i = 1; i < wordList.length; i++) {
-        if (placed.length >= 10) break; // Keep puzzles slightly smaller to ensure they fit
+        if (placed.length >= 12) break;
         let current = wordList[i];
         let placedObj = tryPlaceWord(tempGrid, current, placed);
         if (placedObj) placed.push(placedObj);
     }
     return { words: placed };
 }
-
 function tryPlaceWord(grid, wordObj, placedList) {
     for (let p of placedList) {
         for (let i = 0; i < p.word.length; i++) {
@@ -135,10 +251,8 @@ function tryPlaceWord(grid, wordObj, placedList) {
                 }
             }
         }
-    }
-    return null;
+    } return null;
 }
-
 function canPlace(grid, word, x, y, dir) {
     if (x < 0 || y < 0) return false;
     if (dir === 'across') {
@@ -165,117 +279,19 @@ function canPlace(grid, word, x, y, dir) {
                 if (x < GRID_SIZE - 1 && grid[y+i][x+1] !== null) return false;
             }
         }
-    }
-    return true;
+    } return true;
 }
-
 function placeWord(grid, wordObj, x, y, dir) {
     for (let i = 0; i < wordObj.word.length; i++) {
         if (dir === 'across') grid[y][x+i] = wordObj.word[i];
         else grid[y+i][x] = wordObj.word[i];
     }
 }
-
-function renderBoard() {
-    const board = document.getElementById('crossword-board');
-    const acrossList = document.getElementById('across-clues');
-    const downList = document.getElementById('down-clues');
-    
-    board.innerHTML = '';
-    acrossList.innerHTML = '';
-    downList.innerHTML = '';
-    board.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 38px)`;
-    board.style.gridTemplateRows = `repeat(${GRID_SIZE}, 38px)`;
-    
-    let domCells = [];
-    for(let y=0; y<GRID_SIZE; y++) {
-        let row = [];
-        for(let x=0; x<GRID_SIZE; x++) {
-            let cell = document.createElement('div');
-            cell.className = 'cell block';
-            board.appendChild(cell);
-            row.push(cell);
-        }
-        domCells.push(row);
-    }
-    grid = domCells;
-
-    let clueNum = 1;
-    placedWords.sort((a,b) => (a.startY - b.startY) || (a.startX - b.startX));
-    
-    placedWords.forEach(w => {
-        let startCell = domCells[w.startY][w.startX];
-        if (!startCell.querySelector('.number')) {
-            let num = document.createElement('span');
-            num.className = 'number';
-            num.innerText = clueNum++;
-            startCell.appendChild(num);
-        }
-        let numText = startCell.querySelector('.number').innerText;
-        
-        for (let i = 0; i < w.word.length; i++) {
-            let x = w.direction === 'across' ? w.startX + i : w.startX;
-            let y = w.direction === 'across' ? w.startY : w.startY + i;
-            let cell = domCells[y][x];
-            cell.classList.remove('block');
-            if (!cell.querySelector('input')) {
-                let input = document.createElement('input');
-                input.maxLength = 1;
-                cell.appendChild(input);
-            }
-        }
-        
-        let li = document.createElement('li');
-        li.innerHTML = `<b>${numText}.</b> ${w.clue}`;
-        if (w.direction === 'across') acrossList.appendChild(li);
-        else downList.appendChild(li);
-    });
+function shuffle(array, seed) {
+    let m = array.length, t, i;
+    while (m) {
+        i = Math.floor(random(seed) * m--);
+        seed++; t = array[m]; array[m] = array[i]; array[i] = t;
+    } return array;
 }
-
-function checkAnswers() {
-    let correct = 0;
-    placedWords.forEach(w => {
-        let isCorrect = true;
-        for (let i = 0; i < w.word.length; i++) {
-            let x = w.direction === 'across' ? w.startX + i : w.startX;
-            let y = w.direction === 'across' ? w.startY : w.startY + i;
-            let input = grid[y][x].querySelector('input');
-            if (input.value.toUpperCase() !== w.word[i]) {
-                input.style.color = 'red'; isCorrect = false;
-            } else { input.style.color = 'green'; }
-        }
-        if (isCorrect) correct++;
-    });
-    
-    if (correct === placedWords.length) {
-        // UNLOCK NEXT LEVEL
-        if (currentLevel === maxLevelReached) {
-            maxLevelReached++;
-        }
-        document.getElementById('btn-next').disabled = false;
-        alert("🎉 Level Complete! 'Next Level' button is now unlocked.");
-    }
-}
-
-function revealAnswers() {
-    placedWords.forEach(w => {
-        for (let i = 0; i < w.word.length; i++) {
-            let x = w.direction === 'across' ? w.startX + i : w.startX;
-            let y = w.direction === 'across' ? w.startY : w.startY + i;
-            let input = grid[y][x].querySelector('input');
-            input.value = w.word[i]; input.style.color = 'blue';
-        }
-    });
-}
-
-function nextLevel() { 
-    if (currentLevel < maxLevelReached) {
-        loadLevel(currentLevel + 1); 
-    }
-}
-
-function prevLevel() { 
-    if (currentLevel > 1) {
-        loadLevel(currentLevel - 1); 
-    }
-}
+function random(seed) { var x = Math.sin(seed++) * 10000; return x - Math.floor(x); }
