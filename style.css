@@ -1,64 +1,355 @@
-body {
-    font-family: 'Arial', sans-serif;
-    background-color: #222;
-    display: flex;
-    justify-content: center;
-    padding: 20px;
+// --- 1. THE DATASET (Curated from your CSV) ---
+const WORD_BANK = [
+  {word: "ENVY", clue: "Jealousy"}, {word: "SIMBA", clue: "Lion King hero"},
+  {word: "OLGA", clue: "Gymnast Korbut"}, {word: "SUGAR", clue: "Sweetener"},
+  {word: "REWIND", clue: "VCR button"}, {word: "SEPALS", clue: "Flower parts"},
+  {word: "ROBT", clue: "Gen. ___ E. Lee"}, {word: "TARZAN", clue: "Jungle swinger"},
+  {word: "BINDS", clue: "Tough spots"}, {word: "AMITY", clue: "Friendship"},
+  {word: "REVEL", clue: "Party hard"}, {word: "AUGUR", clue: "Foretell"},
+  {word: "SUDOKU", clue: "Number puzzle"}, {word: "DRUG", clue: "Rx item"},
+  {word: "REVLON", clue: "Makeup brand"}, {word: "DEFECT", clue: "Flaw"},
+  {word: "CHIDE", clue: "Scold"}, {word: "ADAPTS", clue: "Adjusts"},
+  {word: "ODDITY", clue: "Weird thing"}, {word: "BUMP", clue: "Road hazard"},
+  {word: "SNEE", clue: "Old dagger"}, {word: "MAZY", clue: "Labyrinthine"},
+  {word: "TICKER", clue: "Heart, slangily"}, {word: "ZHOU", clue: "Enlai of China"},
+  {word: "CURL", clue: "Bicep exercise"}, {word: "MISTY", clue: "Foggy"},
+  {word: "RICA", clue: "Costa ___"}, {word: "KEPT", clue: "Held onto"},
+  {word: "HOOF", clue: "Horse foot"}, {word: "PIECES", clue: "Parts"},
+  {word: "ROCKET", clue: "Space vehicle"}, {word: "SLITS", clue: "Narrow cuts"},
+  {word: "PIP", clue: "Apple seed"}, {word: "SERENA", clue: "Tennis pro Williams"},
+  {word: "FLAW", clue: "Imperfection"}, {word: "MORGUE", clue: "Body shop?"},
+  {word: "HARMED", clue: "Injured"}, {word: "TAGORE", clue: "Poet Rabindranath"},
+  {word: "LODGES", clue: "Cabins"}, {word: "VITAE", clue: "Curriculum ___"},
+  {word: "MINER", clue: "Coal digger"}, {word: "OPTOUT", clue: "Decline"},
+  {word: "VALID", clue: "Legitimate"}, {word: "HIJACK", clue: "Take over"},
+  {word: "PIANOS", clue: "Grand instruments"}, {word: "OUTDO", clue: "Beat"},
+  {word: "EONS", clue: "Ages"}, {word: "BLOTCH", clue: "Skin mark"},
+  {word: "SEER", clue: "Fortune teller"}, {word: "CODON", clue: "DNA unit"},
+  {word: "GREG", clue: "Brady bunch son"}, {word: "JAG", clue: "Spree"},
+  {word: "FRED", clue: "Flintstone"}, {word: "ELVIS", clue: "The King"},
+  {word: "FAIR", clue: "Just"}, {word: "ZESTER", clue: "Lemon tool"},
+  {word: "EGGNOG", clue: "Xmas drink"}, {word: "SWEDE", clue: "Stockholm native"},
+  {word: "SHAKES", clue: "Trembles"}, {word: "LIMEY", clue: "Old British sailor"},
+  {word: "FAZES", "clue": "Disturbs"}, {word: "DOUBLE", clue: "Twofold"},
+  {word: "GARLIC", clue: "Vampire repellent"}, {word: "WYATT", clue: "Earp of the West"},
+  {word: "TIBIAS", clue: "Shinbones"}, {word: "AURA", clue: "Glow"},
+  {word: "REJOIN", clue: "Meet again"}, {word: "OMELET", clue: "Egg dish"},
+  {word: "UNFAIR", clue: "Not right"}, {word: "SENIOR", clue: "12th grader"},
+  {word: "FROZEN", clue: "Elsa's movie"}, {word: "DIALOG", clue: "Conversation"},
+  {word: "BRISK", clue: "Fast-paced"}, {word: "PELTS", clue: "Animal skins"},
+  {word: "HIGH", clue: "Tall"}, {word: "BREADS", clue: "Loaves"},
+  {word: "IPHONE", clue: "Apple device"}, {word: "ABACI", clue: "Old calculators"},
+  {word: "KHMER", clue: "Cambodian language"}, {word: "WIGAN", clue: "Town in England"},
+  {word: "EASTER", clue: "Spring holiday"}, {word: "EELS", clue: "Slippery fish"},
+  {word: "BOXSET", clue: "DVD collection"}, {word: "PEC", clue: "Chest muscle"},
+  {word: "SCOLD", clue: "Rebuke"}, {word: "SAVORY", clue: "Tasty"},
+  {word: "METAL", clue: "Iron or Gold"}, {word: "OPPOSE", clue: "Go against"},
+  {word: "BOOTHS", clue: "Fair stalls"}, {word: "GAY", clue: "Merry"},
+  {word: "DRENCH", clue: "Soak"}, {word: "SNIVEL", clue: "Whine"},
+  {word: "PANIC", clue: "Sudden fear"}, {word: "RATHER", clue: "Preferably"},
+  {word: "RODIN", clue: "The Thinker sculptor"}, {word: "INDIAN", clue: "Ocean name"},
+  {word: "SANS", clue: "Without"}, {word: "WOOZY", clue: "Dizzy"},
+  {word: "MANTIS", clue: "Praying bug"}, {word: "ZEAL", clue: "Passion"},
+  {word: "ENDING", clue: "Conclusion"}, {word: "SMOGGY", clue: "Hazy air"},
+  {word: "CELINE", clue: "Singer Dion"}, {word: "SHAMES", clue: "Disgraces"},
+  {word: "MAILER", clue: "Author Norman"}, {word: "BABOON", clue: "Large monkey"},
+  {word: "PEAHEN", clue: "Female peacock"}, {word: "KEVLAR", clue: "Armor material"},
+  {word: "IRAQI", clue: "Baghdad resident"}, {word: "GAUGED", clue: "Measured"},
+  {word: "IONIC", clue: "Greek column style"}, {word: "RUB", clue: "Massage"},
+  {word: "RAMPS", clue: "Slopes"}, {word: "DANGLE", clue: "Hang loosely"},
+  {word: "REMAP", clue: "Chart again"}, {word: "WING", clue: "Flight organ"},
+  {word: "CAROLS", clue: "Xmas songs"}, {word: "JARGON", clue: "Lingo"},
+  {word: "READER", clue: "Book lover"}, {word: "ELATES", clue: "Overjoys"},
+  {word: "OTTERS", clue: "River players"}, {word: "DIM", clue: "Dark"},
+  {word: "SHOT", clue: "Injection"}, {word: "BLOCK", clue: "Obstruct"},
+  {word: "LAYS", clue: "Chip brand"}, {word: "LILLIE", clue: "Flower name"},
+  {word: "SPICES", clue: "Seasonings"}, {word: "BRIE", clue: "Soft cheese"},
+  {word: "OATS", clue: "Horse feed"}, {word: "ADZ", clue: "Cutting tool"},
+  {word: "REPOSE", clue: "Rest"}, {word: "TARP", clue: "Covering"},
+  {word: "CRUNCH", clue: "Crispy sound"}, {word: "FLUENT", clue: "Articulate"},
+  {word: "LIBRAS", clue: "October babies"}, {word: "ADMIX", clue: "Mingle"},
+  {word: "THUG", clue: "Hoodlum"}, {word: "FAITH", clue: "Belief"},
+  {word: "HIPS", clue: "Waist neighbors"}, {word: "SKIERS", clue: "Slope sliders"},
+  {word: "PLACED", clue: "Set down"}, {word: "OIL", clue: "Engine fluid"},
+  {word: "WELTS", clue: "Skin bumps"}, {word: "DOPE", clue: "Cool, slangily"},
+  {word: "CLEAVE", clue: "Split apart"}, {word: "CLIO", clue: "History muse"},
+  {word: "ZETA", clue: "Greek letter"}, {word: "ATWAR", clue: "Fighting"},
+  {word: "GULAG", clue: "Soviet prison"}, {word: "GNOMES", clue: "Lawn figures"},
+  {word: "GANGES", clue: "Sacred river"}, {word: "TRAPS", clue: "Snares"},
+  {word: "TULLE", clue: "Tutu fabric"}, {word: "ZEES", clue: "Zs"},
+  {word: "IMPS", clue: "Little devils"}, {word: "ROLLS", clue: "Buns"},
+  {word: "BALS", clue: "Dances"}, {word: "FIFTHS", clue: "Liquor bottles"},
+  {word: "PESTLE", clue: "Grinding tool"}, {word: "COLL", clue: "Higher ed."},
+  {word: "PURL", clue: "Knit stitch"}, {word: "CHECK", clue: "Verify"},
+  {word: "GABON", clue: "African country"}, {word: "KYOTO", clue: "Japanese city"},
+  {word: "FILET", clue: "Boneless steak"}, {word: "DOWNED", clue: "Drank fast"},
+  {word: "ARENT", clue: "Is not"}, {word: "POODLE", clue: "Curly dog"},
+  {word: "INCR", clue: "Increase (abbr)"}, {word: "BYLINE", clue: "Author line"},
+  {word: "COOLIE", clue: "Old worker term"}, {word: "BYRD", clue: "Polar explorer"},
+  {word: "SINNER", clue: "Wrongdoer"}, {word: "CLEANS", clue: "Washes"},
+  {word: "SPOOKS", clue: "Scares"}, {word: "TINKLE", clue: "Bell sound"},
+  {word: "RHO", clue: "Greek R"}, {word: "DEIGNS", clue: "Stoops"},
+  {word: "ORAL", clue: "Spoken"}, {word: "WURST", clue: "German sausage"},
+  {word: "SACRUM", clue: "Back bone"}, {word: "APER", clue: "Copycat"},
+  {word: "STRUNG", clue: "Threaded"}, {word: "HALT", clue: "Stop"},
+  {word: "WHIZ", clue: "Smart kid"}, {word: "TIKI", clue: "Torch type"},
+  {word: "DINERS", clue: "Restaurants"}, {word: "EDGES", clue: "Rims"},
+  {word: "FRISKY", clue: "Playful"}, {word: "ZEPHYR", clue: "West wind"},
+  {word: "SWAN", clue: "Graceful bird"}, {word: "SWAY", clue: "Rock"},
+  {word: "CAST", clue: "Actors"}, {word: "HEARSE", clue: "Long car"},
+  {word: "MBAS", clue: "Bus. degrees"}, {word: "RHETT", clue: "Mr. Butler"},
+  {word: "FLAX", clue: "Linen plant"}
+];
+
+// --- 2. GAME VARIABLES ---
+let currentLevel = 1;
+const GRID_SIZE = 13;
+let grid = [];
+let placedWords = [];
+
+// --- 3. RANDOM NUMBER GENERATOR (Seeded) ---
+// This ensures Level 1 always generates the same puzzle, Level 2 the same, etc.
+function getSeededRandom(seed) {
+    let value = seed % 2147483647;
+    if (value <= 0) value += 2147483646;
+    return function() {
+        value = (value * 16807) % 2147483647;
+        return (value - 1) / 2147483646;
+    }
 }
-.game-container {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    max-width: 1000px;
-    width: 100%;
+
+// --- 4. PUZZLE GENERATOR ENGINE ---
+function generatePuzzle(levelNum) {
+    // A. Init Grid
+    let tempGrid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
+    let attempts = 0;
+    let placed = [];
+    const rng = getSeededRandom(levelNum + 100); // Seed RNG
+    
+    // B. Shuffle Word Bank
+    let shuffledWords = [...WORD_BANK].sort(() => rng() - 0.5);
+    
+    // C. Place First Word (Center)
+    let firstWord = shuffledWords[0];
+    let startX = Math.floor((GRID_SIZE - firstWord.word.length) / 2);
+    let startY = Math.floor(GRID_SIZE / 2);
+    
+    placeWordInGrid(tempGrid, firstWord, startX, startY, 'across');
+    placed.push({ ...firstWord, startX, startY, direction: 'across' });
+    
+    // D. Try to place other words
+    for (let i = 1; i < shuffledWords.length && placed.length < 12; i++) {
+        let currentWord = shuffledWords[i];
+        let bestMove = null;
+        
+        // Find intersection with existing words
+        for (let p of placed) {
+            let intersect = findIntersection(p, currentWord);
+            if (intersect) {
+                // Try to place perpendicular
+                let newDir = p.direction === 'across' ? 'down' : 'across';
+                let newX, newY;
+                
+                if (newDir === 'down') {
+                    newX = p.startX + intersect.indexP;
+                    newY = p.startY - intersect.indexNew;
+                } else {
+                    newX = p.startX - intersect.indexNew;
+                    newY = p.startY + intersect.indexP;
+                }
+                
+                if (canPlace(tempGrid, currentWord.word, newX, newY, newDir)) {
+                    placeWordInGrid(tempGrid, currentWord, newX, newY, newDir);
+                    placed.push({ ...currentWord, startX: newX, startY: newY, direction: newDir });
+                    break; // Word placed, move to next
+                }
+            }
+        }
+    }
+    
+    return { grid: tempGrid, words: placed };
 }
-h1 { text-align: center; }
-.level-selector {
-    text-align: center;
-    margin-bottom: 20px;
-    padding: 10px;
-    background: #f0f0f0;
+
+function findIntersection(placedWordObj, newWordObj) {
+    let pWord = placedWordObj.word;
+    let nWord = newWordObj.word;
+    
+    // Find common letters (simple approach: find first match)
+    // To make it better, we iterate all matches and pick one randomly? 
+    // For simplicity, we pick the first valid one.
+    for (let i = 0; i < pWord.length; i++) {
+        for (let j = 0; j < nWord.length; j++) {
+            if (pWord[i] === nWord[j]) {
+                return { indexP: i, indexNew: j };
+            }
+        }
+    }
+    return null;
 }
-.main-layout {
-    display: flex;
-    gap: 30px;
-    justify-content: center;
-    flex-wrap: wrap;
+
+function canPlace(grid, word, x, y, direction) {
+    if (x < 0 || y < 0) return false;
+    if (direction === 'across') {
+        if (x + word.length > GRID_SIZE) return false;
+        // Check Left/Right boundaries
+        if (x > 0 && grid[y][x-1] !== null) return false;
+        if (x + word.length < GRID_SIZE && grid[y][x+word.length] !== null) return false;
+        
+        for (let i = 0; i < word.length; i++) {
+            let cell = grid[y][x+i];
+            // Conflict check
+            if (cell !== null && cell !== word[i]) return false;
+            // Neighbor check (Top/Bottom) - only if cell is empty (newly placed char)
+            if (cell === null) {
+                if (y > 0 && grid[y-1][x+i] !== null) return false;
+                if (y < GRID_SIZE - 1 && grid[y+1][x+i] !== null) return false;
+            }
+        }
+    } else { // Down
+        if (y + word.length > GRID_SIZE) return false;
+        // Check Top/Bottom boundaries
+        if (y > 0 && grid[y-1][x] !== null) return false;
+        if (y + word.length < GRID_SIZE && grid[y+word.length][x] !== null) return false;
+        
+        for (let i = 0; i < word.length; i++) {
+            let cell = grid[y+i][x];
+            if (cell !== null && cell !== word[i]) return false;
+            // Neighbor check (Left/Right)
+            if (cell === null) {
+                if (x > 0 && grid[y+i][x-1] !== null) return false;
+                if (x < GRID_SIZE - 1 && grid[y+i][x+1] !== null) return false;
+            }
+        }
+    }
+    return true;
 }
-#crossword-board {
-    display: grid;
-    background: #000;
-    border: 4px solid #000;
-    gap: 1px;
+
+function placeWordInGrid(grid, wordObj, x, y, direction) {
+    for (let i = 0; i < wordObj.word.length; i++) {
+        if (direction === 'across') grid[y][x+i] = wordObj.word[i];
+        else grid[y+i][x] = wordObj.word[i];
+    }
 }
-.cell {
-    width: 35px;
-    height: 35px;
-    background: white;
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+
+// --- 5. RENDER & INTERACTION ---
+const board = document.getElementById('crossword-board');
+const acrossList = document.getElementById('across-clues');
+const downList = document.getElementById('down-clues');
+
+function loadLevel(level) {
+    currentLevel = level;
+    document.getElementById('level-input').value = level;
+    
+    // 1. Generate Data
+    const puzzleData = generatePuzzle(level);
+    placedWords = puzzleData.words;
+    
+    // 2. Render Grid
+    board.innerHTML = '';
+    acrossList.innerHTML = '';
+    downList.innerHTML = '';
+    board.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 38px)`;
+    board.style.gridTemplateRows = `repeat(${GRID_SIZE}, 38px)`;
+    
+    // Create Cell Divs
+    let domGrid = [];
+    for (let y = 0; y < GRID_SIZE; y++) {
+        let row = [];
+        for (let x = 0; x < GRID_SIZE; x++) {
+            let cell = document.createElement('div');
+            cell.className = 'cell block';
+            cell.dataset.x = x;
+            cell.dataset.y = y;
+            board.appendChild(cell);
+            row.push(cell);
+        }
+        domGrid.push(row);
+    }
+    
+    // 3. Place Words on Board
+    let clueCount = 1;
+    // Sort words by position to make numbering logical
+    placedWords.sort((a,b) => (a.startY - b.startY) || (a.startX - b.startX));
+    
+    placedWords.forEach(w => {
+        let startCell = domGrid[w.startY][w.startX];
+        
+        // Add Number
+        if (!startCell.querySelector('.number')) {
+            let num = document.createElement('span');
+            num.className = 'number';
+            num.innerText = clueCount++;
+            startCell.appendChild(num);
+        }
+        let numText = startCell.querySelector('.number').innerText;
+        
+        // Fill Letters
+        for (let i = 0; i < w.word.length; i++) {
+            let x = w.direction === 'across' ? w.startX + i : w.startX;
+            let y = w.direction === 'across' ? w.startY : w.startY + i;
+            let cell = domGrid[y][x];
+            cell.classList.remove('block');
+            
+            if (!cell.querySelector('input')) {
+                let input = document.createElement('input');
+                input.maxLength = 1;
+                cell.appendChild(input);
+            }
+        }
+        
+        // Add Clue
+        let li = document.createElement('li');
+        li.innerHTML = `<b>${numText}.</b> ${w.clue}`;
+        if (w.direction === 'across') acrossList.appendChild(li);
+        else downList.appendChild(li);
+    });
+    
+    grid = domGrid; // Save for checking
 }
-.cell.block { background: #000; }
-.cell input {
-    width: 100%; height: 100%;
-    border: none; text-align: center;
-    font-size: 18px; font-weight: bold;
-    text-transform: uppercase;
+
+function checkAnswers() {
+    let correctCount = 0;
+    placedWords.forEach(w => {
+        let isCorrect = true;
+        for (let i = 0; i < w.word.length; i++) {
+            let x = w.direction === 'across' ? w.startX + i : w.startX;
+            let y = w.direction === 'across' ? w.startY : w.startY + i;
+            let input = grid[y][x].querySelector('input');
+            if (input.value.toUpperCase() !== w.word[i]) {
+                input.style.color = 'red';
+                isCorrect = false;
+            } else {
+                input.style.color = '#27ae60';
+            }
+        }
+        if (isCorrect) correctCount++;
+    });
+    
+    if (correctCount === placedWords.length) {
+        alert("🎉 Level Complete! Try the next one.");
+    }
 }
-.cell .number {
-    position: absolute; top: 1px; left: 2px;
-    font-size: 9px; pointer-events: none;
+
+function revealAnswers() {
+    placedWords.forEach(w => {
+        for (let i = 0; i < w.word.length; i++) {
+            let x = w.direction === 'across' ? w.startX + i : w.startX;
+            let y = w.direction === 'across' ? w.startY : w.startY + i;
+            let input = grid[y][x].querySelector('input');
+            input.value = w.word[i];
+            input.style.color = '#2980b9';
+        }
+    });
 }
-.clue-section { display: flex; gap: 20px; flex: 1; min-width: 300px; }
-.clue-column { flex: 1; }
-ul { list-style: none; padding: 0; height: 400px; overflow-y: auto; }
-li { margin-bottom: 8px; font-size: 14px; }
-.controls { margin-top: 20px; text-align: center; }
-button {
-    padding: 12px 24px; cursor: pointer;
-    background: #007bff; color: white;
-    border: none; border-radius: 5px; margin: 0 5px;
+
+// Navigation
+function nextLevel() { loadLevel(currentLevel + 1); }
+function prevLevel() { if(currentLevel > 1) loadLevel(currentLevel - 1); }
+function loadLevelFromInput() {
+    let val = parseInt(document.getElementById('level-input').value);
+    if (val > 0) loadLevel(val);
 }
-button.secondary { background: #6c757d; }
+function generateNewLevel() { loadLevel(Math.floor(Math.random() * 1000) + 1); }
+
+// Initialize
+loadLevel(1);
