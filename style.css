@@ -80,14 +80,72 @@ li b { color: #e67e22; margin-right: 5px; }
 .shake { animation: shake 0.5s; border: 2px solid red; z-index: 10; }
 
 /* Controls */
-.controls { margin-top: auto; text-align: center; background: #dfe6e9; padding: 15px; border-radius: 5px; }
-.instruction { font-size: 12px; color: #7f8c8d; margin-bottom: 10px; }
-#btn-reveal {
-    background: #9b59b6; color: white; border: none; padding: 12px 20px;
-    width: 100%; border-radius: 5px; font-size: 16px; cursor: pointer; transition: 0.3s;
+/* KEEP ALL PREVIOUS CSS UP TO .controls */
+/* ... (Body, Header, Grid, Cells, etc.) ... */
+
+/* --- REPLACE CONTROLS SECTION WITH THIS --- */
+
+.controls {
+    margin-top: auto;
+    text-align: center;
+    background: #dfe6e9;
+    padding: 15px;
+    border-radius: 5px;
 }
-#btn-reveal:hover { background: #8e44ad; }
-#btn-reveal:disabled { background: #bdc3c7; cursor: not-allowed; }
+
+.instruction {
+    font-size: 12px;
+    color: #7f8c8d;
+    margin-bottom: 10px;
+    margin-top: 0;
+}
+
+.button-row {
+    display: flex;
+    gap: 10px;
+}
+
+/* LIQUID BUTTON STYLE */
+.liquid-btn {
+    flex: 1;
+    position: relative;
+    border: none;
+    border-radius: 5px;
+    background: #9b59b6; /* Default Purple */
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    overflow: hidden; /* Clips the water */
+    height: 45px;
+    transition: background 0.3s;
+}
+
+.liquid-btn:hover { background: #8e44ad; }
+.liquid-btn:disabled { cursor: not-allowed; background: #95a5a6; }
+
+/* The Text (z-index to stay on top of water) */
+.btn-text {
+    position: relative;
+    z-index: 2;
+}
+
+/* The Water Overlay */
+.liquid {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 0%; /* Start empty */
+    background: rgba(0, 0, 0, 0.3); /* Darkens the button */
+    z-index: 1;
+    transition: none; /* JS will handle animation */
+}
+
+/* Different color for Word Reveal to distinguish */
+#btn-reveal-word { background: #e67e22; }
+#btn-reveal-word:hover { background: #d35400; }
+
+/* ... KEEP MODAL STYLES ... */
 
 /* Victory Modal */
 .modal {
