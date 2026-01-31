@@ -35,11 +35,18 @@
                     </div>
                     
                     <div class="controls">
-                        <p class="instruction">Click a square to select it.</p>
-                        <button id="btn-reveal" onclick="revealSelectedSquare()">
-                            Reveal Letter 
-                            <span id="cooldown-timer"></span>
-                        </button>
+                        <p class="instruction">Select a square or word first.</p>
+                        <div class="button-row">
+                            <button id="btn-reveal-letter" class="liquid-btn" onclick="revealSelectedSquare()">
+                                <span class="btn-text">Reveal Letter</span>
+                                <div class="liquid"></div>
+                            </button>
+                            
+                            <button id="btn-reveal-word" class="liquid-btn" onclick="revealSelectedWord()">
+                                <span class="btn-text">Reveal Word</span>
+                                <div class="liquid"></div>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -49,11 +56,10 @@
     <div id="victory-modal" class="modal">
         <div class="modal-content">
             <h2>🎉 Level Complete!</h2>
-            <p>Great job!</p>
             <button onclick="nextLevel()" class="next-level-btn">Play Next Level</button>
         </div>
     </div>
 
-    <script src="script.js?v=3"></script>
+    <script src="script.js"></script>
 </body>
 </html>
