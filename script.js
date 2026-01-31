@@ -6,14 +6,15 @@ let placedWords = [];
 let currentDirection = 'across'; 
 let selectedCell = { x: -1, y: -1 };
 
-// Track cooldowns separately
+// Track cooldowns
 let cooldowns = {
     letter: false,
     word: false
 };
 
 window.onload = function() {
-    Papa.parse("nytcrosswords.csv", {
+    // Ensure filename matches your upload
+    Papa.parse("nytcrosswords_25mb.csv", {
         download: true, header: true,
         complete: function(results) { processData(results.data); },
         error: function(err) { alert("Error loading CSV."); }
@@ -117,13 +118,27 @@ function renderBoard() {
     });
 }
 
+// --- SMART SELECTION LOGIC ---
+
 function selectCell(x, y) {
     const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
     if (cell.classList.contains('block')) return;
+
+    // Check if there are words in both directions at this spot
+    const wordAcross = placedWords.find(w => w.direction === 'across' && w.startY === y && x >= w.startX && x < w.startX + w.word.length);
+    const wordDown = placedWords.find(w => w.direction === 'down' && w.startX === x && y >= w.startY && y < w.startY + w.word.length);
+
     if (selectedCell.x === x && selectedCell.y === y) {
+        // If clicking the same cell, toggle direction
         currentDirection = currentDirection === 'across' ? 'down' : 'across';
     } else {
         selectedCell = { x, y };
+        // SMART SWITCH: If current direction has no word here, switch automatically
+        if (currentDirection === 'across' && !wordAcross && wordDown) {
+            currentDirection = 'down';
+        } else if (currentDirection === 'down' && !wordDown && wordAcross) {
+            currentDirection = 'across';
+        }
     }
     highlightBoard();
     const input = cell.querySelector('input');
@@ -134,6 +149,7 @@ function highlightBoard() {
     document.querySelectorAll('.cell').forEach(c => c.classList.remove('active', 'highlight'));
     const activeCell = document.querySelector(`.cell[data-x="${selectedCell.x}"][data-y="${selectedCell.y}"]`);
     if (activeCell) activeCell.classList.add('active');
+    
     const wordObj = getActiveWordObj();
     if (wordObj) {
         for(let i=0; i<wordObj.word.length; i++) {
@@ -201,7 +217,7 @@ function checkCurrentWord() {
     }
 }
 
-// --- REVEAL LOGIC ---
+// --- REVEAL LOGIC (FIXED) ---
 
 function revealSelectedSquare() {
     if (cooldowns.letter) return;
@@ -229,7 +245,8 @@ function revealSelectedWord() {
         let x = wordObj.direction === 'across' ? wordObj.startX + i : wordObj.startX;
         let y = wordObj.direction === 'across' ? wordObj.startY : wordObj.startY + i;
         let input = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"] input`);
-        input.value = w.word[i]; // Typo fix in next line
+        
+        // FIXED: Now uses wordObj.word[i] correctly
         input.value = wordObj.word[i]; 
         input.style.color = '#e67e22'; // Orange for word reveal
         input.parentElement.classList.add('correct');
@@ -247,14 +264,9 @@ function startLiquidCooldown(btnId, type, seconds) {
     
     btn.disabled = true;
     
-    // 1. Reset Liquid to full (0% top, 100% height)
     liquid.style.transition = 'none';
     liquid.style.height = '100%';
-    
-    // Force browser reflow to apply the height immediately
-    liquid.offsetHeight; 
-
-    // 2. Start animation: Drain to 0%
+    liquid.offsetHeight; // Force reflow
     liquid.style.transition = `height ${seconds}s linear`;
     liquid.style.height = '0%';
 
