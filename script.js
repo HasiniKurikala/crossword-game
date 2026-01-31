@@ -14,7 +14,7 @@ let cooldowns = {
 
 window.onload = function() {
     // Ensure filename matches your upload
-    Papa.parse("nytcrosswords_25mb.csv", {
+    Papa.parse("nytcrosswords.csv", {
         download: true, header: true,
         complete: function(results) { processData(results.data); },
         error: function(err) { alert("Error loading CSV."); }
