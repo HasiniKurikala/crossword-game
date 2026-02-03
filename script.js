@@ -1,56 +1,105 @@
-let allWords = [];
+// --- CONFIGURATION ---
+const GEMINI_API_KEY = "AIzaSyDWb5PKPGH3_14qH9XTGuUg_tZV2Zn_qJg"; 
+// ^^^ STEP 1: PASTE YOUR KEY ABOVE ^^^
+
 let currentLevel = 1;
 const GRID_SIZE = 13;
 let grid = []; 
 let placedWords = [];
 let currentDirection = 'across'; 
 let selectedCell = { x: -1, y: -1 };
+let cooldowns = { letter: false, word: false };
+let isLoading = false;
 
-// Track cooldowns
-let cooldowns = {
-    letter: false,
-    word: false
-};
+// --- FALLBACK DATA (If AI fails or quota exceeded) ---
+const FALLBACK_WORDS = [
+    {word: "VIRAT", clue: "King of Cricket"}, {word: "CHAI", clue: "Tapri drink"},
+    {word: "MUMBAI", clue: "City of Dreams"}, {word: "SRK", clue: "King Khan"},
+    {word: "DOSA", clue: "South Indian crepe"}, {word: "PUNE", clue: "IT hub near Mumbai"},
+    {word: "GOLMAAL", clue: "Rohit Shetty comedy"}, {word: "PYTHON", clue: "Coding language"},
+    {word: "SAMOSA", clue: "Tea time snack"}, {word: "DELHI", clue: "Capital city"},
+    {word: "MODI", clue: "Indian PM"}, {word: "DHONI", clue: "Captain Cool"},
+    {word: "LUDO", clue: "Lockdown board game"}, {word: "ROTI", clue: "Daily bread"},
+    {word: "AUTO", clue: "Three wheeler"}, {word: "OLA", clue: "Uber rival"},
+    {word: "UPI", clue: "Digital payment"}, {word: "GOA", clue: "Party state"},
+    {word: "ISRO", clue: "Indian Space Agency"}, {word: "REELS", clue: "Instagram addiction"}
+];
 
 window.onload = function() {
-    // Ensure filename matches your upload
-    Papa.parse("nytcrosswords.csv", {
-        download: true, header: true,
-        complete: function(results) { processData(results.data); },
-        error: function(err) { alert("Error loading CSV."); }
-    });
+    // Start game immediately
+    loadLevel(1);
 };
 
-function processData(data) {
-    let seen = new Set();
-    let uniqueData = [];
-    data.forEach(row => {
-        if (!row.Word || !row.Clue) return;
-        let cleanWord = row.Word.toString().toUpperCase().replace(/[^A-Z]/g, '');
-        if (cleanWord.length >= 3 && cleanWord.length <= 6) {
-            if (!seen.has(cleanWord)) {
-                seen.add(cleanWord);
-                uniqueData.push({ word: cleanWord, clue: row.Clue });
-            }
-        }
-    });
-    allWords = shuffle(uniqueData, 12345);
-    document.getElementById('loading-screen').style.display = 'none';
-    document.getElementById('game-area').style.display = 'block';
-    loadLevel(1);
-}
-
-function loadLevel(level) {
+async function loadLevel(level) {
+    if (isLoading) return;
+    isLoading = true;
     currentLevel = level;
+    
     document.getElementById('current-level').innerText = level;
     document.getElementById('victory-modal').style.display = 'none';
-    
-    const startIndex = (level - 1) * 20;
-    const levelWords = allWords.slice(startIndex, startIndex + 20);
-    
-    if (levelWords.length < 5) { alert("End of Game!"); return; }
+    document.getElementById('loading-screen').style.display = 'block';
+    document.getElementById('game-area').style.display = 'none';
 
-    const puzzleData = generateGrid(levelWords);
+    let words = [];
+
+    // IF KEY IS MISSING, USE FALLBACK
+    if (GEMINI_API_KEY === "PASTE_YOUR_KEY_HERE" || GEMINI_API_KEY === "") {
+        console.warn("No API Key found. Using fallback data.");
+        words = shuffle(FALLBACK_WORDS, level).slice(0, 15);
+        startGame(words);
+        return;
+    }
+
+    try {
+        words = await fetchWordsFromAI(level);
+    } catch (error) {
+        console.error("AI Error:", error);
+        alert("AI Generation failed. Loading backup words.");
+        words = shuffle(FALLBACK_WORDS, level).slice(0, 15);
+    }
+
+    startGame(words);
+}
+
+// --- AI GENERATION LOGIC ---
+async function fetchWordsFromAI(level) {
+    const prompt = `
+        Generate a valid JSON array of 20 crossword objects. 
+        Format: [{"word": "WORD", "clue": "Clue text"}]. 
+        Constraints:
+        1. Words must be 3 to 7 letters long. Uppercase only.
+        2. TARGET AUDIENCE: INDIANS (Gen Z/Millennials).
+        3. TOPICS: Bollywood, Indian Cricket (IPL), Indian Food, Indian Cities, Tech/Coding, Daily Indian Life, Slang.
+        4. STRICTLY AVOID: Philosophy, obscure history, Latin, complex biology, American politics.
+        5. CLUE STYLE: Fun, witty, relatable, hinglish allowed.
+        6. Level difficulty: ${level} (1 is easy/common, 50 is harder).
+        7. Output ONLY the JSON. No markdown formatting.
+    `;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+        })
+    });
+
+    const data = await response.json();
+    const rawText = data.candidates[0].content.parts[0].text;
+    
+    // Clean up if AI wraps it in markdown code blocks
+    const jsonText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(jsonText);
+}
+
+function startGame(wordList) {
+    isLoading = false;
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('game-area').style.display = 'block';
+
+    if (wordList.length < 5) { alert("Not enough words generated."); return; }
+
+    const puzzleData = generateGrid(wordList);
     placedWords = puzzleData.words;
     renderBoard();
 }
@@ -118,27 +167,20 @@ function renderBoard() {
     });
 }
 
-// --- SMART SELECTION LOGIC ---
-
 function selectCell(x, y) {
     const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
     if (cell.classList.contains('block')) return;
 
-    // Check if there are words in both directions at this spot
+    // Smart Direction Switching
     const wordAcross = placedWords.find(w => w.direction === 'across' && w.startY === y && x >= w.startX && x < w.startX + w.word.length);
     const wordDown = placedWords.find(w => w.direction === 'down' && w.startX === x && y >= w.startY && y < w.startY + w.word.length);
 
     if (selectedCell.x === x && selectedCell.y === y) {
-        // If clicking the same cell, toggle direction
         currentDirection = currentDirection === 'across' ? 'down' : 'across';
     } else {
         selectedCell = { x, y };
-        // SMART SWITCH: If current direction has no word here, switch automatically
-        if (currentDirection === 'across' && !wordAcross && wordDown) {
-            currentDirection = 'down';
-        } else if (currentDirection === 'down' && !wordDown && wordAcross) {
-            currentDirection = 'across';
-        }
+        if (currentDirection === 'across' && !wordAcross && wordDown) currentDirection = 'down';
+        else if (currentDirection === 'down' && !wordDown && wordAcross) currentDirection = 'across';
     }
     highlightBoard();
     const input = cell.querySelector('input');
@@ -217,19 +259,13 @@ function checkCurrentWord() {
     }
 }
 
-// --- REVEAL LOGIC (FIXED) ---
-
 function revealSelectedSquare() {
     if (cooldowns.letter) return;
     if (selectedCell.x === -1) { alert("Select a square!"); return; }
-
     const correctLetter = grid[selectedCell.y][selectedCell.x];
     const cell = document.querySelector(`.cell[data-x="${selectedCell.x}"][data-y="${selectedCell.y}"]`);
     const input = cell.querySelector('input');
-    
-    input.value = correctLetter;
-    input.style.color = '#8e44ad';
-    
+    input.value = correctLetter; input.style.color = '#8e44ad';
     checkWinCondition();
     startLiquidCooldown('btn-reveal-letter', 'letter', 15);
 }
@@ -237,43 +273,28 @@ function revealSelectedSquare() {
 function revealSelectedWord() {
     if (cooldowns.word) return;
     if (selectedCell.x === -1) { alert("Select a word!"); return; }
-
     const wordObj = getActiveWordObj();
-    if (!wordObj) { alert("No word selected in this direction!"); return; }
-
+    if (!wordObj) { alert("No word selected!"); return; }
     for(let i=0; i<wordObj.word.length; i++) {
         let x = wordObj.direction === 'across' ? wordObj.startX + i : wordObj.startX;
         let y = wordObj.direction === 'across' ? wordObj.startY : wordObj.startY + i;
         let input = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"] input`);
-        
-        // FIXED: Now uses wordObj.word[i] correctly
         input.value = wordObj.word[i]; 
-        input.style.color = '#e67e22'; // Orange for word reveal
+        input.style.color = '#e67e22'; 
         input.parentElement.classList.add('correct');
     }
-
     checkWinCondition();
     startLiquidCooldown('btn-reveal-word', 'word', 20);
 }
 
-// LIQUID COOLDOWN ANIMATION
 function startLiquidCooldown(btnId, type, seconds) {
     cooldowns[type] = true;
     const btn = document.getElementById(btnId);
     const liquid = btn.querySelector('.liquid');
-    
     btn.disabled = true;
-    
-    liquid.style.transition = 'none';
-    liquid.style.height = '100%';
-    liquid.offsetHeight; // Force reflow
-    liquid.style.transition = `height ${seconds}s linear`;
-    liquid.style.height = '0%';
-
-    setTimeout(() => {
-        cooldowns[type] = false;
-        btn.disabled = false;
-    }, seconds * 1000);
+    liquid.style.transition = 'none'; liquid.style.height = '100%'; liquid.offsetHeight; 
+    liquid.style.transition = `height ${seconds}s linear`; liquid.style.height = '0%';
+    setTimeout(() => { cooldowns[type] = false; btn.disabled = false; }, seconds * 1000);
 }
 
 function checkWinCondition() {
@@ -291,7 +312,6 @@ function checkWinCondition() {
 
 function nextLevel() { loadLevel(currentLevel + 1); }
 
-// Utilities
 function generateGrid(wordList) {
     let tempGrid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
     let placed = [];
